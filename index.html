@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Čteme dnešek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: školní pracovní list. Nahoře čtyři karty témat, pod nimi text vlevo a úlohy vpravo (na telefonu pod sebou). */
+:root {
+  --bg: #EEF3F6;
+  --surface: #FFFFFF;
+  --ink: #14232B;
+  --muted: #475A64;
+  --line: #CFDAE1;
+  --accent: #0B6B6F;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEEEF;
+  --mark: #FFE36B;
+  --pick: #CDE9EA;
+  --good: #17724A;
+  --good-bg: #DDF3E7;
+  --bad: #A8322A;
+  --bad-bg: #F9E1DE;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1A20; --surface: #15252D; --ink: #E7EFF3; --muted: #A0B3BD; --line: #2A3F49;
+    --accent: #5FD0C6; --accent-ink: #082126; --accent-soft: #17383C; --mark: #6A5810; --pick: #1D4448;
+    --good: #6FDDA5; --good-bg: #153A2A; --bad: #FF9E94; --bad-bg: #44211F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1A20; --surface: #15252D; --ink: #E7EFF3; --muted: #A0B3BD; --line: #2A3F49;
+  --accent: #5FD0C6; --accent-ink: #082126; --accent-soft: #17383C; --mark: #6A5810; --pick: #1D4448;
+  --good: #6FDDA5; --good-bg: #153A2A; --bad: #FF9E94; --bad-bg: #44211F;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 18px; line-height: 1.6;
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.12; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; }
+header h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 800; letter-spacing: -0.02em; }
+.date { margin: 6px 0 0; color: var(--muted); font-size: 1rem; }
+.total { min-width: 220px; flex: 0 1 280px; }
+.total .lbl { font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.total .num { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; }
+
+.tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 900px) { .tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tab { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); text-decoration: none; color: var(--ink); min-width: 0; }
+.tab[aria-current="page"] { border-color: var(--accent); background: var(--accent-soft); }
+.tab .t { font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; font-weight: 700; color: var(--muted); }
+.tab .h { font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; line-height: 1.2; }
+.tab .p { font-size: .88rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab .p.done { color: var(--good); font-weight: 700; }
+
+.read { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (min-width: 900px) { .read { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; } }
+.text, .tasks { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; min-width: 0; }
+@media (max-width: 480px) { .text, .tasks { padding: 18px; } }
+.tag { margin: 0 0 8px; font-size: .82rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--accent); }
+.text h2 { font-size: clamp(1.7rem, 4.5vw, 2.4rem); font-weight: 800; letter-spacing: -0.015em; }
+.lede { color: var(--muted); font-size: 1.05rem; margin: 10px 0 18px; }
+.body { position: relative; font-size: 1.12rem; line-height: 1.75; max-width: 66ch; }
+.body p { margin: 0 0 1em; }
+.sn { cursor: pointer; border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.sn.pick { background: var(--pick); }
+.sn.ev { background: var(--mark); box-shadow: 0 0 0 2px var(--mark); }
+.gl { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help; text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; font-weight: 600; }
+#pop { position: absolute; z-index: 5; width: max-content; background: var(--ink); color: var(--bg); padding: 10px 12px; border-radius: 8px; font-size: .95rem; line-height: 1.4; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 18px 0 0; font-size: 1rem; }
+.note strong { display: block; font-family: var(--font-display); }
+.tip, .src { font-size: .92rem; color: var(--muted); margin: 18px 0 0; }
+.src a { overflow-wrap: anywhere; }
+
+.tasks h3 { font-size: 1.5rem; font-weight: 800; }
+.tasks .sub { color: var(--muted); font-size: .95rem; margin: 4px 0 16px; }
+.qs { list-style: none; counter-reset: q; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 20px; }
+.q { counter-increment: q; padding-top: 18px; border-top: 1px solid var(--line); }
+.q:first-child { border-top: 0; padding-top: 0; }
+.qt { margin: 0 0 10px; font-weight: 600; }
+.qt::before { content: counter(q) ". "; color: var(--accent); font-weight: 700; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { display: flex; align-items: flex-start; gap: 8px; text-align: left; font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 2px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; width: 100%; }
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt:disabled { cursor: default; }
+.opt.ok { background: var(--good-bg); border-color: var(--good); }
+.opt.bad { background: var(--bad-bg); border-color: var(--bad); }
+.mk { font-weight: 800; flex: none; }
+.opt.ok .mk { color: var(--good); }
+.opt.bad .mk { color: var(--bad); }
+.why { margin: 8px 0 0; font-size: .95rem; padding: 8px 10px; border-radius: 6px; }
+.why.g { background: var(--good-bg); }
+.why.b { background: var(--bad-bg); }
+.numrow { display: flex; gap: 8px; flex-wrap: wrap; }
+input[type="text"], textarea { font: inherit; font-size: 1rem; color: var(--ink); background: var(--bg); border: 2px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+input[type="text"] { width: 9rem; }
+textarea { width: 100%; min-height: 96px; resize: vertical; }
+.btn { font: inherit; font-weight: 700; font-size: .98rem; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.model { margin: 10px 0 0; padding: 10px 12px; background: var(--accent-soft); border-radius: 8px; font-size: .97rem; }
+.model b { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.actions { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.result { font-weight: 700; font-variant-numeric: tabular-nums; }
+footer { color: var(--muted); font-size: .92rem; max-width: 70ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Čteme dnešek</h1>
+      <p class="date">Čtyři zprávy z neděle 22. listopadu 2026, přepsané pro čtenáře kolem dvanácti let</p>
+    </div>
+    <div class="total" aria-live="polite">
+      <div class="lbl">Správně celkem</div>
+      <div class="num" id="totalNum">0 z 0</div>
+      <div class="bar" aria-hidden="true"><i id="totalBar"></i></div>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Témata"></nav>
+  <main id="panel"></main>
+  <footer>
+    Pro učitele: každý text zabere zhruba dvě minuty čtení. Uzavřené otázky se vyhodnotí hned, u otevřených si žák po napsání odpovědi zobrazí ukázku. Texty jsou volně přepsané ze zpravodajských článků a zjednodušené, odkazy na zdroje jsou pod každým z nich.
+  </footer>
+</div>
+
+<script>
+var A = [
+{
+  id: "planeta", tag: "Věda", min: 2,
+  title: "Hledá se devátá planeta",
+  lede: "Mladá astronomka hlídá v chilských horách obří dalekohled a pomáhá hledat nová tělesa za Neptunem.",
+  p: [
+    [["s1", "Na vrcholu hory v chilských Andách, 2700 metrů nad mořem, stojí jedna z nejmodernějších [[hvězdáren|observatoř: budova s velkými dalekohledy, kde astronomové pozorují vesmír]] světa. Jmenuje se Observatoř Very Rubinové."],
+     ["s2", "Pracuje tam i mladá slovenská astronomka Danica Žilková, která v noci hlídá obří dalekohled."]],
+    [["s3", "Říká, že se někdy cítí, jako by řídila ponorku. Observatoř je celá z kovu, je odříznutá od okolního světa a astronomové musí znát každou součást a umět ji opravit."],
+     ["s4", "Dalekohled má největší kameru na světě. Na jedné fotografii zachytí stovku [[galaxií|galaxie: obrovské seskupení hvězd, planet a prachu]], běžný dalekohled jen jednu."]],
+    [["s5", "Deset let bude fotit noční oblohu. V říjnu s ním vědci objevili novou [[trpasličí planetu|trpasličí planeta: kulaté těleso, které obíhá Slunce, ale je menší než planeta; známé je třeba Pluto]] za Neptunem. Dostala jméno 2026 ED138."],
+     ["s6", "Podle zprávy šlo teprve o čtvrté těleso tohoto druhu."],
+     ["s7", "V prvních snímcích našli vědci také víc než 2400 těles za Neptunem."]],
+    [["s8", "Dalekohled hledá i [[asteroidy|asteroid: kamenné nebo kovové těleso, které krouží kolem Slunce]], které by mohly Zemi ohrozit. Všechna naměřená data jsou veřejná, takže by se takový objev nedal utajit."],
+     ["s9", "Počítačové modely naznačují, že by za Neptunem mohla být ještě devátá planeta. Zatím ji nikdo neviděl. Protože ale dalekohled bude oblohu fotit deset let, je podle Žilkové velká šance, že ji někde zachytí."]]
+  ],
+  note: null,
+  src: [["ČT24: Za Neptunem by mohla být ještě planeta", "https://ct24.ceskatelevize.cz/clanek/veda/za-neptunem-by-mohla-byt-jeste-planeta-rika-slovenska-vedkyne-spojena-s-objevem-trpaslici-planetky-379789"]],
+  q: [
+    { type: "mc", q: "Kde stojí Observatoř Very Rubinové?", opts: ["V Alpách", "V chilských Andách", "Na Slovensku"], a: 1, ev: "s1", why: "Stojí na vrcholu hory v chilských Andách, ve výšce 2700 metrů." },
+    { type: "mc", q: "Čím je dalekohled výjimečný?", opts: ["Má největší kameru na světě", "Je nejvyšší věží na světě", "Vyfotí vždy jen jednu galaxii"], a: 0, ev: "s4", why: "Na jednu fotku zachytí stovku galaxií." },
+    { type: "mc", q: "Proč je podle Žilkové dobrá šance najít devátou planetu?", opts: ["Už ji jednou vyfotili", "Dalekohled bude deset let fotit oblohu", "Je vidět pouhým okem"], a: 1, ev: "s9", why: "Dlouhé focení zvyšuje pravděpodobnost, že se planeta objeví na snímku." },
+    { type: "tf", q: "Danica Žilková pracuje na observatoři ve Španělsku.", a: false, ev: "s1", why: "Pracuje v Chile." },
+    { type: "tf", q: "Trpasličí planeta 2026 ED138 leží za Neptunem.", a: true, ev: "s5", why: "Přímo to říká třetí odstavec." },
+    { type: "tf", q: "Devátou planetu už vědci jednoznačně objevili.", a: false, ev: "s9", why: "Zatím ji nikdo neviděl, jen ji naznačují počítačové modely." },
+    { type: "open", q: "Vysvětli vlastními slovy, proč Danica Žilková srovnává práci na observatoři s řízením ponorky.", model: "Observatoř je celá z kovu a je izolovaná od okolí, podobně jako ponorka. Astronomové musí znát všechna zařízení uvnitř a v případě poruchy je opravit sami." }
+  ]
+},
+{
+  id: "klima", tag: "Svět", min: 2,
+  title: "Konference o klimatu se protáhla přes víkend",
+  lede: "Státy z celého světa se v Turecku dohadují, jak zpomalit oteplování planety. Jednání mělo skončit už v pátek.",
+  p: [
+    [["s1", "V tureckém městě Antalya se od 9. listopadu scházejí zástupci téměř dvou set států na klimatické konferenci COP31. Domlouvají se, jak zpomalit [[globální oteplování|globální oteplování: postupné zvyšování průměrné teploty na Zemi]]."],
+     ["s2", "Konferenci hostí Turecko, jednání mezi státy ale vede Austrálie."]],
+    [["s3", "Konference měla skončit v pátek 20. listopadu. [[Vyjednavači|vyjednavač: zástupce státu, který se u stolu snaží dojít k dohodě]] ale jednali celou sobotu a pokračovali i v noci na neděli."],
+     ["s4", "Brzy ráno předložil předseda konference Murat Kurum nový návrh dohody. Věří, že s ním budou souhlasit všechny státy. V neděli dopoledne se o něm mělo hlasovat."]],
+    [["s5", "Největší spor se vede o [[fosilní paliva|fosilní paliva: uhlí, ropa a zemní plyn; jejich spalováním vzniká oxid uhličitý, který Zemi ohřívá]]. Část států by chtěla, aby se v dohodě psalo o jejich postupném ukončení. Podle pozorovatelů ale velcí producenti ropy, například Saúdská Arábie, tlačili na to, aby je text nezmiňoval."],
+     ["s6", "Organizace 350.org, která bojuje proti oteplování, je z návrhu zklamaná, protože fosilní paliva výslovně nezmiňuje."]],
+    [["s7", "Druhý spor se týká peněz. Chudší země potřebují pomoc, aby se dokázaly přizpůsobit změnám klimatu, třeba suchu nebo povodním. Předseda Kurum řekl, že obavy kolem fosilních paliv i financí podle něj nový návrh řeší."]]
+  ],
+  note: ["Co ještě nevíme", "Když se tento text psal, výsledek hlasování ještě nebyl znám. Zkus v dnešních zprávách dohledat, jak to dopadlo."],
+  src: [["Reuters (přetištěno): COP31 climate talks close to final deal", "https://www.spokesman.com/stories/2026/nov/21/cop31-climate-talks-close-to-final-deal-says-summi/"],
+        ["Malay Mail: reakce organizace 350.org na návrh", "https://mediaselangor.com/en/2026/11/408500"]],
+  q: [
+    { type: "mc", q: "Ve kterém městě se konference koná?", opts: ["V Antalyi", "V Paříži", "V Rio de Janeiru"], a: 0, ev: "s1", why: "Konference COP31 se koná v tureckém městě Antalya." },
+    { type: "mc", q: "Kdo předložil nový návrh dohody?", opts: ["Danica Žilková", "Murat Kurum", "Marek Dědič"], a: 1, ev: "s4", why: "Návrh předložil předseda konference Murat Kurum." },
+    { type: "mc", q: "O čem se spor vede hlavně?", opts: ["O fosilní paliva a o peníze pro chudší země", "O to, kde bude příští konference", "O to, kolik lidí přijede"], a: 0, ev: "s5", why: "Spor je o ukončení fosilních paliv a o finanční pomoc chudším státům." },
+    { type: "tf", q: "Konference skončila přesně podle plánu v pátek 20. listopadu.", a: false, ev: "s3", why: "Jednalo se i v sobotu a v noci na neděli." },
+    { type: "tf", q: "Nový návrh dohody výslovně nezmiňuje ukončení fosilních paliv.", a: true, ev: "s6", why: "Právě to organizaci 350.org zklamalo." },
+    { type: "tf", q: "Konferenci hostí Turecko.", a: true, ev: "s2", why: "Turecko je hostitel, jednání vede Austrálie." },
+    { type: "open", q: "Proč podle tebe potřebují chudší země při změně klimatu pomoc? Použij informaci z textu a vlastní příklad.", model: "Chudší země mají méně peněz na ochranu před následky změny klimatu. Bez pomoci se hůř přizpůsobí třeba suchu nebo povodním, například nemají peníze na přehrady nebo na odolnější plodiny." }
+  ]
+},
+{
+  id: "slepice", tag: "Příroda a zemědělství", min: 2,
+  title: "Slepice se stěhují z klecí na louky",
+  lede: "Od nového roku je v Česku zakázané chovat slepice v klecích. Farmáři přestavují kurníky a zkoušejí i robotické.",
+  p: [
+    [["s1", "Od nového roku zakazuje zákon chovat slepice v klecích. Čeští zemědělci proto přestavují kurníky na prostornější [[voliéry|voliéra: velká hala, kde se slepice volně pohybují, vylétnou na bidlo a hrabou]]."],
+     ["s2", "Slepice si tam mohou vyletět na bidlo, popelit se nebo se jen projít."],
+     ["s3", "Z klecí se do voliér obvykle nestěhují, protože by to pro ně bylo stresující. Pro život ve volnějším prostoru jsou [[nosnice|nosnice: slepice, která snáší vejce]] speciálně vyšlechtěné."]],
+    [["s4", "Nové chovy ale stojí víc peněz. Voliéry je potřeba několikrát denně procházet, hledat zanesená vejce nebo měnit [[podestýlku|podestýlka: hrabanka na zemi, třeba sláma nebo hobliny]]. Vejce z voliér mají být zhruba o patnáct procent dražší než z obohacených klecí."]],
+    [["s5", "Novinkou je robotický kurník. Vejde se do něj až pět set slepic a pomocí solárních panelů a chytré techniky si sám doplňuje vodu i krmení. Za den popojede asi o svou délku, takže slepice mají každý den čerstvou trávu."],
+     ["s6", "Před rokem jezdil po českých loukách jediný, letos jich je skoro třicet."]],
+    [["s7", "Každý Čech průměrně sní 238 vajec ročně. Česko je v jejich spotřebě [[soběstačné|soběstačný: umí si vyrobit vše potřebné samo]] z 85 procent. Zbytek se [[dováží|dovoz: zboží, které se koupí v zahraničí a přiveze do země]], nejvíc z Polska."],
+     ["s8", "Čeští chovatelé říkají, že vejce prodávají jen těsně nad cenou, za jakou je vyrobí, a dovoz jim konkuruje. Školní jídelna v Písku přesto za česká vejce měsíčně připlácí dva až čtyři tisíce korun. Vedoucí jídelny říká, že cena nerozhoduje vždycky: důležitá je čerstvost, rychlá doprava a jistota kvality."]]
+  ],
+  note: null,
+  src: [["ČT24: Náhrada klecí chovatele slepic stojí víc", "https://ct24.ceskatelevize.cz/clanek/domaci/nahrada-kleci-chovatele-slepic-stoji-vic-s-drazsimi-vejci-ale-nekonkuruji-dovozu-379816"]],
+  q: [
+    { type: "mc", q: "Co zakazuje zákon od nového roku?", opts: ["Chov slepic v klecích", "Prodej vajec", "Dovoz vajec z Polska"], a: 0, ev: "s1", why: "Zákon zakazuje klecové chovy slepic." },
+    { type: "mc", q: "Kolik slepic se vejde do robotického kurníku?", opts: ["Až padesát", "Až pět set", "Až pět tisíc"], a: 1, ev: "s5", why: "Do robotického kurníku se vejde až pět set slepic." },
+    { type: "mc", q: "Proč se slepice z klecí do voliér obvykle nestěhují?", opts: ["Voliéry jsou moc malé", "Bylo by to pro ně stresující", "Nechtějí létat"], a: 1, ev: "s3", why: "Změna by pro ně byla stresující, proto se do voliér dávají jiné slepice." },
+    { type: "tf", q: "Robotický kurník využívá solární panely.", a: true, ev: "s5", why: "Panely mu dodávají energii na provoz." },
+    { type: "tf", q: "Česko je v počtu vajec úplně soběstačné a žádná nedováží.", a: false, ev: "s7", why: "Soběstačné je z 85 procent, zbytek se dováží." },
+    { type: "tf", q: "Před rokem jezdilo po českých loukách skoro třicet robotických kurníků.", a: false, ev: "s6", why: "Před rokem jezdil jen jeden, skoro třicet jich je letos." },
+    { type: "num", q: "Každý Čech průměrně sní 238 vajec ročně. Kolik vajec za rok sní čtyřčlenná rodina?", a: 952, ev: "s7", why: "238 × 4 = 952 vajec." },
+    { type: "open", q: "Školní jídelna v Písku platí za česká vejce víc. Napiš dva důvody, proč to dělá.", model: "Chce zaručenou čerstvost a rychlou dopravu. K tomu má jistotu, že kvalita vajec odpovídá českým pravidlům." }
+  ]
+},
+{
+  id: "skola", tag: "Škola a technologie", min: 2,
+  title: "Chytrý asistent, který nevyzradí výsledek",
+  lede: "Aplikace pro přípravu na přijímačky využívá umělou inteligenci, ale žáka nenechá opisovat.",
+  p: [
+    [["s1", "Deváťáci se už připravují na přijímací zkoušky na střední školy. Pomoct jim může bezplatná aplikace EDU-AI."],
+     ["s2", "Učivo v ní vysvětluje [[umělá inteligence|umělá inteligence: počítačový program, který umí odpovídat na otázky a vysvětlovat podobně jako člověk]]."]],
+    [["s3", "V aplikaci je AI asistent, který dokáže odpovědět na jakoukoli otázku. Přímé řešení ale žákovi nikdy neřekne."],
+     ["s4", "Místo toho se ho zeptá, kde se zasekl a jestli rozumí danému kroku."],
+     ["s5", "Takhle dokáže pomoct například se zlomky."]],
+    [["s6", "Tak to popisuje iniciátor projektu Marek Dědič."],
+     ["s7", "Přípravu zdarma nabízí také organizace Cermat."]]
+  ],
+  note: ["Zamysli se", "Proč asistent žákovi hned neukáže výsledek? Napadá tě, jak se při učení liší přemýšlení nad úlohou od opisování hotového řešení? Toto vysvětlení není součástí zprávy, je to otázka k diskusi."],
+  src: [["ČT24: S přípravou na přijímací zkoušky žákům pomáhá AI aplikace", "https://ct24.ceskatelevize.cz/clanek/domaci/s-pripravou-na-prijimaci-zkousky-zakum-pomaha-ai-aplikace-379819"]],
+  q: [
+    { type: "mc", q: "Jak se jmenuje aplikace?", opts: ["EDU-AI", "ZLOMEK-PLUS", "CERMAT-GO"], a: 0, ev: "s1", why: "Aplikace se jmenuje EDU-AI." },
+    { type: "mc", q: "Co asistent žákovi nikdy neposkytne?", opts: ["Vysvětlení učiva", "Přímé řešení úlohy", "Odpověď na otázku"], a: 1, ev: "s3", why: "Přímé řešení žákovi nikdy neřekne." },
+    { type: "mc", q: "Kdo další nabízí přípravu na přijímačky zdarma?", opts: ["Cermat", "Ministerstvo obrany", "Český rozhlas"], a: 0, ev: "s7", why: "Přípravu zdarma nabízí také Cermat." },
+    { type: "tf", q: "Aplikace EDU-AI je placená.", a: false, ev: "s1", why: "Je bezplatná." },
+    { type: "tf", q: "Aplikace dokáže pomoct například se zlomky.", a: true, ev: "s5", why: "Zlomky jsou přímo uvedený příklad." },
+    { type: "tf", q: "Asistent odpovídá jen na otázky z matematiky.", a: false, ev: "s3", why: "Dokáže odpovědět na jakoukoli otázku." },
+    { type: "open", q: "Proč je podle tebe lepší, když se tě asistent nejdřív zeptá, kde ses zasekl, než kdyby ti ukázal výsledek?", model: "Když přemýšlím a hledám chybu sám, lépe si postup zapamatuju. Kdyby mi asistent dal hotový výsledek, jen bych ho opsal a příště bych úlohu nezvládl." }
+  ]
+}
+];
+
+var S = {};
+A.forEach(function (a) { S[a.id] = { ans: {}, open: {}, hl: {} }; });
+var cur = A[0].id;
+var $ = function (s) { return document.querySelector(s); };
+function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function glossify(t) {
+  return t.replace(/\[\[(.+?)\|(.+?)\]\]/g, function (m, w, d) {
+    return '<button type="button" class="gl" data-def="' + esc(d) + '">' + w + "</button>";
+  });
+}
+function graded(a) { return a.q.filter(function (q) { return q.type !== "open"; }); }
+function stats(a) {
+  var tot = 0, ans = 0, ok = 0;
+  a.q.forEach(function (q, i) {
+    if (q.type === "open") return;
+    tot++;
+    var r = S[a.id].ans[i];
+    if (r) { ans++; if (r.correct) ok++; }
+  });
+  return { tot: tot, ans: ans, ok: ok };
+}
+function evSet(a) {
+  var s = {};
+  a.q.forEach(function (q, i) { if (S[a.id].ans[i] && q.ev) s[q.ev] = true; });
+  return s;
+}
+function textHTML(a) {
+  var ev = evSet(a), hl = S[a.id].hl;
+  return a.p.map(function (par) {
+    return "<p>" + par.map(function (x) {
+      var id = x[0];
+      return '<span class="sn' + (ev[id] ? " ev" : "") + (hl[id] ? " pick" : "") + '" data-s="' + id + '">' + glossify(x[1]) + "</span>";
+    }).join(" ") + "</p>";
+  }).join("");
+}
+function qHTML(a, q, i) {
+  var st = S[a.id], r = st.ans[i], o = st.open[i] || {};
+  var h = '<li class="q"><p class="qt">' + q.q + "</p>";
+  if (q.type === "mc" || q.type === "tf") {
+    var opts = q.type === "tf" ? ["Pravda", "Nepravda"] : q.opts;
+    var right = q.type === "tf" ? (q.a ? 0 : 1) : q.a;
+    h += '<div class="opts">' + opts.map(function (t, k) {
+      var c = "opt", m = "";
+      if (r) {
+        if (k === right) { c += " ok"; m = '<span class="mk" aria-hidden="true">✓</span>'; }
+        else if (k === r.choice) { c += " bad"; m = '<span class="mk" aria-hidden="true">✗</span>'; }
+      }
+      return '<button type="button" class="' + c + '" data-act="pick" data-q="' + i + '" data-i="' + k + '"' + (r ? " disabled" : "") + ">" + m + "<span>" + t + "</span></button>";
+    }).join("") + "</div>";
+    if (r) h += '<p class="why ' + (r.correct ? "g" : "b") + '">' + (r.correct ? "Správně. " : "Tentokrát ne. ") + q.why + "</p>";
+  } else if (q.type === "num") {
+    h += '<div class="numrow"><input type="text" inputmode="numeric" id="n-' + a.id + "-" + i + '" data-qi="' + i + '" value="' + esc(o.text || "") + '" aria-label="Tvoje odpověď"' + (r ? " disabled" : "") + '>' +
+      '<button type="button" class="btn" data-act="num" data-q="' + i + '"' + (r ? " disabled" : "") + ">Zkontrolovat</button></div>";
+    if (r) h += '<p class="why ' + (r.correct ? "g" : "b") + '">' + (r.correct ? "Správně. " : "Tentokrát ne. ") + q.why + "</p>";
+  } else {
+    h += '<textarea id="t-' + a.id + "-" + i + '" data-qi="' + i + '" placeholder="Napiš odpověď vlastními slovy…" aria-label="Tvoje odpověď">' + esc(o.text || "") + "</textarea>";
+    if (o.shown) h += '<div class="model"><b>Ukázka odpovědi</b>' + q.model + "</div>";
+    else h += '<div class="actions"><button type="button" class="btn ghost" data-act="show" data-q="' + i + '">Ukázat ukázku odpovědi</button></div>';
+  }
+  return h + "</li>";
+}
+function render() {
+  var a = A.filter(function (x) { return x.id === cur; })[0];
+  var tT = 0, tO = 0;
+  $("#tabs").innerHTML = A.map(function (x) {
+    var s = stats(x);
+    tT += s.tot; tO += s.ok;
+    var done = s.ans === s.tot;
+    return '<a class="tab" href="#' + x.id + '"' + (x.id === cur ? ' aria-current="page"' : "") + '><span class="t">' + x.tag + '</span><span class="h">' + x.title + '</span><span class="p' + (done ? " done" : "") + '">' + (done ? "Hotovo: " : "") + s.ok + " z " + s.tot + " správně</span></a>";
+  }).join("");
+  $("#totalNum").textContent = tO + " z " + tT;
+  $("#totalBar").style.width = (tT ? Math.round(100 * tO / tT) : 0) + "%";
+  var st = stats(a);
+  $("#panel").innerHTML =
+    '<article class="read"><div class="text"><p class="tag">' + a.tag + " · " + a.min + ' minuty čtení</p><h2>' + a.title + '</h2><p class="lede">' + a.lede + '</p>' +
+    '<div class="body" id="body">' + textHTML(a) + "</div>" +
+    (a.note ? '<div class="note"><strong>' + a.note[0] + "</strong>" + a.note[1] + "</div>" : "") +
+    '<p class="tip">Klepni na tečkovaně podtržené slovo a zobrazí se vysvětlení. Klepnutím na větu ji zvýrazníš. Žlutě se označí věta, ze které vyplývá tvoje odpověď.</p>' +
+    '<p class="src">Zdroje: ' + a.src.map(function (s) { return '<a href="' + s[1] + '" target="_blank" rel="noopener">' + s[0] + "</a>"; }).join("; ") + "</p></div>" +
+    '<div class="tasks"><h3>Úlohy</h3><p class="sub">Odpověz a zjisti, jestli ses v textu vyznal.</p><ol class="qs">' +
+    a.q.map(function (q, i) { return qHTML(a, q, i); }).join("") +
+    '</ol><div class="actions"><span class="result" aria-live="polite">' + st.ok + " z " + st.tot + ' správně</span><button type="button" class="btn ghost" data-act="reset">Vymazat odpovědi</button></div></div></article>';
+}
+function showPop(btn) {
+  var body = $("#body"), pop = $("#pop");
+  if (!pop) { pop = document.createElement("div"); pop.id = "pop"; pop.setAttribute("role", "note"); body.appendChild(pop); }
+  var d = btn.getAttribute("data-def");
+  if (!pop.hidden && pop.getAttribute("data-for") === d) { pop.hidden = true; return; }
+  pop.textContent = d; pop.hidden = false; pop.setAttribute("data-for", d);
+  var b = body.getBoundingClientRect(), r = btn.getBoundingClientRect();
+  var mw = Math.min(300, b.width);
+  pop.style.maxWidth = mw + "px";
+  var left = Math.max(0, Math.min(r.left - b.left, b.width - mw));
+  pop.style.left = left + "px";
+  pop.style.top = (r.bottom - b.top + 6) + "px";
+}
+function curA() { return A.filter(function (x) { return x.id === cur; })[0]; }
+function checkNum(i) {
+  var a = curA(), q = a.q[i], el = document.getElementById("n-" + a.id + "-" + i);
+  var raw = (el.value || "").replace(/\s/g, "").replace(",", ".");
+  if (raw === "" || isNaN(Number(raw))) return;
+  var v = Number(raw);
+  S[a.id].open[i] = { text: el.value };
+  S[a.id].ans[i] = { choice: v, correct: Math.abs(v - q.a) < 1e-9 };
+  render();
+}
+document.addEventListener("click", function (e) {
+  var g = e.target.closest(".gl");
+  if (g) { showPop(g); return; }
+  var pop = $("#pop");
+  if (pop && !e.target.closest("#pop")) pop.hidden = true;
+  var act = e.target.closest("[data-act]");
+  if (act) {
+    var a = curA(), kind = act.getAttribute("data-act"), i = +act.getAttribute("data-q");
+    if (kind === "pick") {
+      var q = a.q[i], k = +act.getAttribute("data-i");
+      var right = q.type === "tf" ? (q.a ? 0 : 1) : q.a;
+      S[a.id].ans[i] = { choice: k, correct: k === right };
+      render();
+    } else if (kind === "num") { checkNum(i); }
+    else if (kind === "show") { S[a.id].open[i] = Object.assign(S[a.id].open[i] || {}, { shown: true }); render(); }
+    else if (kind === "reset") { S[a.id].ans = {}; render(); }
+    return;
+  }
+  var sn = e.target.closest(".sn");
+  if (sn) {
+    var id = sn.getAttribute("data-s"), hl = S[cur].hl;
+    hl[id] = !hl[id];
+    sn.classList.toggle("pick", !!hl[id]);
+  }
+});
+document.addEventListener("input", function (e) {
+  var el = e.target, qi = el.getAttribute && el.getAttribute("data-qi");
+  if (qi !== null && qi !== undefined) {
+    S[cur].open[qi] = Object.assign(S[cur].open[qi] || {}, { text: el.value });
+  }
+});
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") { var p = $("#pop"); if (p) p.hidden = true; }
+  if (e.key === "Enter" && e.target.id && e.target.id.indexOf("n-") === 0) {
+    e.preventDefault(); checkNum(+e.target.getAttribute("data-qi"));
+  }
+});
+function fromHash() {
+  var h = location.hash.replace("#", "");
+  if (S[h]) cur = h;
+  render();
+}
+window.addEventListener("hashchange", fromHash);
+fromHash();
+</script>
+</body>
+</html>
